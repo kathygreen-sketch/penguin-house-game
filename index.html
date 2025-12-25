@@ -1,0 +1,798 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Penguin House — Word Quest</title>
+  <style>
+    :root{
+      --bg:#121212;
+      --paper:#f8f8f8;
+      --ink:#111;
+      --muted:#666;
+      --line:#111;
+      --soft:#e9e9e9;
+      --ok:#22c55e;
+      --bad:#ef4444;
+      --accent:#7c3aed; /* purple headband vibe */
+    }
+    html,body{height:100%; margin:0; font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial;}
+    body{
+      background: radial-gradient(circle at center, #2a2a2a 0%, #0f0f0f 70%);
+      display:flex; align-items:center; justify-content:center;
+      padding:18px;
+      color:#fff;
+    }
+
+    /* Main frame (simple 2D) */
+    .frame{
+      width:min(1100px, 98vw);
+      height:min(640px, 92vh);
+      background:#e6e6e6;
+      border-radius:12px;
+      padding:10px;
+    }
+    .bezel{
+      height:100%;
+      background:#262626;
+      border-radius:10px;
+      padding:10px;
+    }
+    .screen{
+      height:100%;
+      background:#dcdcdc;
+      border-radius:8px;
+      padding:12px;
+      display:grid;
+      grid-template-columns: 340px 1fr;
+      gap:12px;
+    }
+
+    /* Left control panel */
+    .panel{
+      background:#fff;
+      border:3px solid var(--line);
+      border-radius:12px;
+      padding:14px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      color:var(--ink);
+    }
+    .hdr{
+      display:flex; justify-content:space-between; align-items:center;
+      font-weight:900; letter-spacing:.12em; text-transform:uppercase;
+      font-size:13px;
+    }
+    .pill{
+      border:2px solid var(--line);
+      border-radius:999px;
+      padding:4px 10px;
+      font-weight:900;
+      font-size:12px;
+      background:#fff;
+      white-space:nowrap;
+    }
+
+    .penguinBox{
+      border:2px dashed #bbb;
+      border-radius:12px;
+      background: linear-gradient(#fff, #f2f2f2);
+      padding:10px;
+      display:flex;
+      gap:10px;
+      align-items:center;
+    }
+    .penguinBox img{
+      width:74px; height:74px; object-fit:contain;
+      border-radius:10px;
+      background:#fff;
+      border:2px solid #111;
+    }
+    .penguinText{
+      display:flex; flex-direction:column; gap:6px;
+      flex:1;
+    }
+    .penguinText .big{
+      font-weight:1000; font-size:16px;
+    }
+    .penguinText .small{
+      color:var(--muted);
+      font-weight:800;
+      font-size:12px;
+      line-height:1.3;
+    }
+
+    .stats{
+      display:flex; gap:8px; flex-wrap:wrap;
+    }
+    .stat{
+      border:2px solid #111;
+      border-radius:999px;
+      padding:6px 10px;
+      font-weight:900;
+      font-size:12px;
+      background:#fff;
+    }
+    .btnRow{ display:flex; gap:10px; }
+    .btn{
+      border:2px solid #111;
+      background:#fff;
+      border-radius:12px;
+      padding:10px 12px;
+      font-weight:1000;
+      cursor:pointer;
+      color:#111;
+      flex:1;
+      user-select:none;
+    }
+    .btn:active{ transform: translateY(1px); }
+    .btn.primary{
+      background: #fff;
+      box-shadow: inset 0 0 0 3px var(--accent);
+    }
+
+    .note{
+      border-left:4px solid #111;
+      padding-left:10px;
+      color:#222;
+      font-weight:800;
+      font-size:12px;
+      line-height:1.35;
+    }
+
+    /* Right: House map */
+    .house{
+      border:3px solid #111;
+      border-radius:12px;
+      background:
+        radial-gradient(circle, #cfcfcf 1.2px, transparent 1.2px) 0 0/14px 14px,
+        #f7f7f7;
+      padding:12px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      color:#111;
+      position:relative;
+      overflow:hidden;
+    }
+    .houseTop{
+      display:flex; align-items:center; justify-content:space-between;
+      font-weight:1000; letter-spacing:.08em; text-transform:uppercase;
+      font-size:12px;
+    }
+
+    .map{
+      flex:1;
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap:12px;
+      align-content:start;
+    }
+    .room{
+      border:3px solid #111;
+      border-radius:14px;
+      background:#fff;
+      padding:10px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      min-height:150px;
+      position:relative;
+    }
+    .room.locked{
+      opacity:.55;
+      filter: grayscale(1);
+    }
+    .roomTitle{
+      display:flex; align-items:center; justify-content:space-between;
+      font-weight:1000;
+      font-size:13px;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+    .roomTitle .tag{
+      border:2px solid #111;
+      border-radius:999px;
+      padding:3px 8px;
+      font-size:12px;
+      font-weight:1000;
+      background:#fff;
+    }
+
+    .cabinets{
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap:8px;
+    }
+    .cabinet{
+      border:2px solid #111;
+      border-radius:12px;
+      background:#fff;
+      min-height:54px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      user-select:none;
+      font-weight:1000;
+      gap:2px;
+    }
+    .cabinet small{
+      font-weight:900;
+      color:#666;
+      font-size:10px;
+      letter-spacing:.06em;
+      text-transform:uppercase;
+    }
+    .cabinet.done{
+      border-color: var(--ok);
+      background: #f0fff4;
+    }
+    .cabinet.lock{
+      cursor:not-allowed;
+    }
+
+    /* Penguin position marker (simple) */
+    .penguinMarker{
+      position:absolute;
+      right:10px;
+      bottom:10px;
+      border:2px solid #111;
+      border-radius:12px;
+      background:#fff;
+      padding:6px 8px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .penguinMarker img{ width:28px; height:28px; object-fit:contain; }
+    .penguinMarker .where{
+      font-size:12px;
+      font-weight:1000;
+    }
+
+    /* Modal for challenges */
+    .modalBack{
+      position:fixed;
+      inset:0;
+      background: rgba(0,0,0,.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      z-index:50;
+    }
+    .modal{
+      width:min(640px, 96vw);
+      background:#fff;
+      border:3px solid #111;
+      border-radius:16px;
+      padding:14px;
+      color:#111;
+    }
+    .modalTop{
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px;
+    }
+    .modalTop .title{
+      font-weight:1000;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      font-size:12px;
+    }
+    .xBtn{
+      border:2px solid #111;
+      border-radius:10px;
+      background:#fff;
+      font-weight:1000;
+      padding:6px 10px;
+      cursor:pointer;
+    }
+    .challengeBox{
+      margin-top:10px;
+      border:2px dashed #bbb;
+      border-radius:14px;
+      padding:12px;
+      background: linear-gradient(#fff, #f3f3f3);
+    }
+    .prompt{
+      font-weight:1000;
+      font-size:20px;
+      margin:0 0 10px 0;
+    }
+    .subprompt{
+      font-weight:900;
+      color:#444;
+      margin:0 0 12px 0;
+      line-height:1.35;
+    }
+
+    .choices{
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap:10px;
+    }
+    .choice{
+      border:2px solid #111;
+      border-radius:12px;
+      background:#fff;
+      padding:10px;
+      cursor:pointer;
+      font-weight:1000;
+      user-select:none;
+      text-align:center;
+    }
+    .choice.ok{ border-color: var(--ok); background:#f0fff4; }
+    .choice.bad{ border-color: var(--bad); background:#fff1f2; }
+
+    .inputRow{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      margin-top:10px;
+    }
+    input[type="text"]{
+      flex:1;
+      border:2px solid #111;
+      border-radius:12px;
+      padding:10px;
+      font-weight:1000;
+      outline:none;
+    }
+
+    .msg{
+      margin-top:10px;
+      font-weight:1000;
+      min-height:20px;
+    }
+
+    .ttsBtn{
+      border:2px solid #111;
+      border-radius:12px;
+      padding:10px 12px;
+      background:#fff;
+      font-weight:1000;
+      cursor:pointer;
+      user-select:none;
+    }
+
+    @media (max-width: 900px){
+      .screen{ grid-template-columns: 1fr; height:auto; }
+      .frame{ height:auto; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="frame">
+    <div class="bezel">
+      <div class="screen">
+
+        <!-- LEFT PANEL -->
+        <div class="panel">
+          <div class="hdr">
+            <div>Penguin House</div>
+            <div class="pill" id="statusPill">Loading…</div>
+          </div>
+
+          <div class="penguinBox">
+            <img src="penguin.png" alt="Penguin"/>
+            <div class="penguinText">
+              <div class="big" id="missionTitle">Mission</div>
+              <div class="small" id="missionText">Get correct answers to earn the key and unlock the next room.</div>
+            </div>
+          </div>
+
+          <div class="stats">
+            <div class="stat" id="roomStat">Room: —</div>
+            <div class="stat" id="keyStat">Keys: 0</div>
+            <div class="stat" id="scoreStat">Score: 0</div>
+          </div>
+
+          <div class="btnRow">
+            <button class="btn primary" id="startBtn">Start</button>
+            <button class="btn" id="resetBtn">Reset</button>
+          </div>
+
+          <div class="note">
+            How to play: Click a cabinet in the current room → answer the challenge → earn points.
+            Get <b>3 correct</b> in a room to earn a key and unlock the next room.
+          </div>
+
+          <div class="note" id="teacherNote">
+            Teacher: Words come from Airtable (hosted). If you don’t see content, check that “Active” is checked in Airtable.
+          </div>
+        </div>
+
+        <!-- RIGHT HOUSE MAP -->
+        <div class="house">
+          <div class="houseTop">
+            <div>Explore the House</div>
+            <div class="pill" id="progressPill">Room 1</div>
+          </div>
+
+          <div class="map" id="map"></div>
+
+          <div class="penguinMarker">
+            <img src="penguin.png" alt="Penguin small"/>
+            <div class="where" id="whereText">Standing in Room 1</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL -->
+  <div class="modalBack" id="modalBack">
+    <div class="modal">
+      <div class="modalTop">
+        <div class="title" id="modalTitle">Challenge</div>
+        <button class="xBtn" id="closeModal">Close</button>
+      </div>
+      <div class="challengeBox" id="challengeBox"></div>
+    </div>
+  </div>
+
+<script>
+/** =========================
+ *  CONFIG YOU SET WHEN HOSTED
+ *  =========================
+ * After deploying to Vercel, set this to your endpoint:
+ * window.WORDS_API = "https://YOUR-VERCEL-DOMAIN.vercel.app/api/words";
+ */
+window.WORDS_API = ""; // <- you will fill this after you deploy
+
+/** Room settings */
+const TOTAL_ROOMS = 6;         // house size
+const CABINETS_PER_ROOM = 6;   // boxes per room
+const CORRECT_TO_GET_KEY = 3;  // win per room
+
+/** Game State */
+let wordsByRoom = {};          // {1:[...],2:[...]}
+let unlockedRoom = 1;
+let keys = 0;
+let score = 0;
+let currentRoom = 1;
+let cabinetState = {};         // "room-cab": {done:true}
+
+/** DOM */
+const elMap = document.getElementById("map");
+const statusPill = document.getElementById("statusPill");
+const roomStat = document.getElementById("roomStat");
+const keyStat = document.getElementById("keyStat");
+const scoreStat = document.getElementById("scoreStat");
+const progressPill = document.getElementById("progressPill");
+const whereText = document.getElementById("whereText");
+const startBtn = document.getElementById("startBtn");
+const resetBtn = document.getElementById("resetBtn");
+
+const modalBack = document.getElementById("modalBack");
+const challengeBox = document.getElementById("challengeBox");
+const modalTitle = document.getElementById("modalTitle");
+const closeModal = document.getElementById("closeModal");
+
+/** Helpers */
+function shuffle(arr){
+  const a = arr.slice();
+  for (let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+function clamp(n, a, b){ return Math.max(a, Math.min(b,n)); }
+function speak(text){
+  if (!("speechSynthesis" in window)) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = "en-US";
+  u.rate = 0.92;
+  window.speechSynthesis.speak(u);
+}
+
+/** =========================
+ *  LOAD WORDS (from your Vercel proxy)
+ *  ========================= */
+async function loadWords(){
+  if (!window.WORDS_API){
+    statusPill.textContent = "Needs Hosting";
+    throw new Error("WORDS_API not set. Deploy to Vercel and set window.WORDS_API.");
+  }
+  statusPill.textContent = "Loading…";
+  const r = await fetch(window.WORDS_API);
+  if (!r.ok) throw new Error("Failed to load words");
+  const data = await r.json();
+  const words = data.words || [];
+
+  // Group by room
+  wordsByRoom = {};
+  for (let i=1;i<=TOTAL_ROOMS;i++) wordsByRoom[i] = [];
+  for (const w of words){
+    const room = clamp(parseInt(w.room || "1", 10) || 1, 1, TOTAL_ROOMS);
+    wordsByRoom[room].push(w);
+  }
+  statusPill.textContent = "Ready";
+}
+
+/** =========================
+ *  RENDER HOUSE
+ *  ========================= */
+function render(){
+  roomStat.textContent = `Room: ${currentRoom}/${TOTAL_ROOMS}`;
+  keyStat.textContent = `Keys: ${keys}`;
+  scoreStat.textContent = `Score: ${score}`;
+  progressPill.textContent = `Room ${currentRoom}`;
+  whereText.textContent = `Standing in Room ${currentRoom}`;
+
+  elMap.innerHTML = "";
+  for (let r=1;r<=TOTAL_ROOMS;r++){
+    const roomEl = document.createElement("div");
+    roomEl.className = "room" + (r>unlockedRoom ? " locked" : "");
+    const correctInRoom = countCorrectInRoom(r);
+
+    roomEl.innerHTML = `
+      <div class="roomTitle">
+        <div>Room ${r}</div>
+        <div class="tag">${r<=unlockedRoom ? (correctInRoom>=CORRECT_TO_GET_KEY ? "KEY ✅" : `${correctInRoom}/${CORRECT_TO_GET_KEY}`) : "LOCK 🔒"}</div>
+      </div>
+      <div class="cabinets" id="cabs-${r}"></div>
+    `;
+
+    // click room to move (only if unlocked)
+    roomEl.addEventListener("click", (e) => {
+      // prevent cabinet click bubble from double-handling
+      if (e.target && e.target.classList && e.target.classList.contains("cabinet")) return;
+      if (r<=unlockedRoom){
+        currentRoom = r;
+        render();
+      }
+    });
+
+    elMap.appendChild(roomEl);
+
+    const cabs = roomEl.querySelector(`#cabs-${r}`);
+    for (let c=1;c<=CABINETS_PER_ROOM;c++){
+      const key = `${r}-${c}`;
+      const done = !!cabinetState[key]?.done;
+      const isLocked = r>unlockedRoom || r!==currentRoom;
+
+      const cab = document.createElement("div");
+      cab.className = "cabinet" + (done ? " done" : "") + (isLocked ? " lock" : "");
+      cab.innerHTML = `<div>📦</div><small>${done ? "opened" : (isLocked ? "locked" : "open")}</small>`;
+
+      cab.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        if (isLocked) return;
+        if (done) return; // already solved
+        openCabinet(r, c);
+      });
+
+      cabs.appendChild(cab);
+    }
+  }
+}
+
+function countCorrectInRoom(room){
+  let n=0;
+  for (let c=1;c<=CABINETS_PER_ROOM;c++){
+    const key = `${room}-${c}`;
+    if (cabinetState[key]?.done) n++;
+  }
+  return n;
+}
+
+/** =========================
+ *  CHALLENGES
+ *  ========================= */
+function pickWordForRoom(room){
+  const list = wordsByRoom[room] || [];
+  if (!list.length) return null;
+  // pick word based on cabinet index to spread usage
+  const shuffled = shuffle(list);
+  return shuffled[0];
+}
+
+function openCabinet(room, cabinet){
+  const w = pickWordForRoom(room);
+  if (!w){
+    showModal("No words found", `<p class="subprompt">Room ${room} has no active words in Airtable. Add rows with Room=${room} and Active checked.</p>`);
+    return;
+  }
+
+  // Choose challenge type:
+  // If sentence exists -> fill-in
+  // else randomly meaning or pronunciation
+  const hasSentence = !!(w.sentence && String(w.sentence).includes("____"));
+  const type = hasSentence ? "fill" : (Math.random()<0.5 ? "meaning" : "pronounce");
+
+  if (type==="fill") renderFill(room, cabinet, w);
+  else if (type==="pronounce") renderPronounce(room, cabinet, w);
+  else renderMeaning(room, cabinet, w);
+}
+
+function showModal(title, html){
+  modalTitle.textContent = title;
+  challengeBox.innerHTML = html;
+  modalBack.style.display = "flex";
+}
+
+function closeModalNow(){
+  modalBack.style.display = "none";
+  challengeBox.innerHTML = "";
+}
+
+closeModal.addEventListener("click", closeModalNow);
+modalBack.addEventListener("click", (e)=>{ if(e.target===modalBack) closeModalNow(); });
+
+function markSuccess(room, cabinet){
+  cabinetState[`${room}-${cabinet}`] = { done:true };
+  score += 10;
+
+  // If room completed -> key
+  const correctInRoom = countCorrectInRoom(room);
+  if (correctInRoom >= CORRECT_TO_GET_KEY && room === unlockedRoom && unlockedRoom < TOTAL_ROOMS){
+    keys += 1;
+    unlockedRoom += 1;
+  }
+  render();
+}
+
+function markFail(){
+  score = Math.max(0, score - 2);
+  render();
+}
+
+function renderMeaning(room, cabinet, w){
+  const pool = (wordsByRoom[room] || []).filter(x => x.word !== w.word);
+  const distractors = shuffle(pool).slice(0, 3).map(x => x.meaning);
+  const choices = shuffle([w.meaning, ...distractors]).slice(0,4);
+
+  const html = `
+    <p class="prompt">${escapeHtml(w.word)} ${w.emoji ? escapeHtml(w.emoji) : ""}</p>
+    <p class="subprompt">Choose the correct meaning.</p>
+    <div class="choices">
+      ${choices.map(ch => `<div class="choice" data-choice="${escapeHtml(ch)}">${escapeHtml(ch)}</div>`).join("")}
+    </div>
+    <div class="msg" id="msg"></div>
+  `;
+  showModal("Match Meaning", html);
+
+  document.querySelectorAll(".choice").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const chosen = el.getAttribute("data-choice");
+      const msg = document.getElementById("msg");
+      if (chosen === w.meaning){
+        el.classList.add("ok");
+        msg.textContent = "✅ Correct! Cabinet unlocked.";
+        markSuccess(room, cabinet);
+        setTimeout(closeModalNow, 700);
+      } else {
+        el.classList.add("bad");
+        msg.textContent = "❌ Try again.";
+        markFail();
+      }
+    });
+  });
+}
+
+function renderPronounce(room, cabinet, w){
+  const pool = (wordsByRoom[room] || []).filter(x => x.word !== w.word);
+  const distractors = shuffle(pool).slice(0, 3).map(x => x.meaning);
+  const choices = shuffle([w.meaning, ...distractors]).slice(0,4);
+
+  const html = `
+    <button class="ttsBtn" id="playBtn">🔊 Play word</button>
+    <p class="subprompt">Listen, then choose the correct meaning.</p>
+    <div class="choices">
+      ${choices.map(ch => `<div class="choice" data-choice="${escapeHtml(ch)}">${escapeHtml(ch)}</div>`).join("")}
+    </div>
+    <div class="msg" id="msg"></div>
+  `;
+  showModal("Match Pronunciation", html);
+
+  document.getElementById("playBtn").addEventListener("click", ()=> speak(w.word));
+  setTimeout(()=> speak(w.word), 250);
+
+  document.querySelectorAll(".choice").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const chosen = el.getAttribute("data-choice");
+      const msg = document.getElementById("msg");
+      if (chosen === w.meaning){
+        el.classList.add("ok");
+        msg.textContent = "✅ Correct! Cabinet unlocked.";
+        markSuccess(room, cabinet);
+        setTimeout(closeModalNow, 700);
+      } else {
+        el.classList.add("bad");
+        msg.textContent = "❌ Try again.";
+        markFail();
+      }
+    });
+  });
+}
+
+function renderFill(room, cabinet, w){
+  const sentence = String(w.sentence || "");
+  const html = `
+    <p class="prompt">Fill in the blank</p>
+    <p class="subprompt">${escapeHtml(sentence)}</p>
+    <div class="inputRow">
+      <input type="text" id="fillInput" placeholder="Type the missing word"/>
+      <button class="ttsBtn" id="checkBtn">Check</button>
+    </div>
+    <div class="msg" id="msg"></div>
+    <div style="margin-top:10px;">
+      <button class="ttsBtn" id="hintBtn">🔊 Hear the word</button>
+    </div>
+  `;
+  showModal("Sentence Practice", html);
+
+  document.getElementById("hintBtn").addEventListener("click", ()=> speak(w.word));
+
+  document.getElementById("checkBtn").addEventListener("click", ()=>{
+    const msg = document.getElementById("msg");
+    const val = (document.getElementById("fillInput").value || "").trim().toLowerCase();
+    const target = String(w.word || "").trim().toLowerCase();
+
+    if (val === target){
+      msg.textContent = "✅ Correct! Cabinet unlocked.";
+      markSuccess(room, cabinet);
+      setTimeout(closeModalNow, 700);
+    } else {
+      msg.textContent = "❌ Not yet. Try again.";
+      markFail();
+    }
+  });
+}
+
+/** =========================
+ *  START / RESET
+ *  ========================= */
+function resetAll(){
+  unlockedRoom = 1;
+  keys = 0;
+  score = 0;
+  currentRoom = 1;
+  cabinetState = {};
+  render();
+}
+
+startBtn.addEventListener("click", async ()=>{
+  try{
+    startBtn.disabled = true;
+    startBtn.textContent = "Loading…";
+    await loadWords();
+    resetAll();
+    startBtn.textContent = "Start";
+  } catch(e){
+    console.error(e);
+    alert(
+      "Could not load words.\n\n" +
+      "You must host this game on Vercel and set window.WORDS_API to your /api/words endpoint.\n\n" +
+      "Error: " + e.message
+    );
+    startBtn.disabled = false;
+    startBtn.textContent = "Start";
+  }
+});
+
+resetBtn.addEventListener("click", ()=>{
+  resetAll();
+});
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+  }[c]));
+}
+
+/** Initial render (structure first) */
+render();
+statusPill.textContent = "Press Start";
+</script>
+
+</body>
+</html>
